@@ -8,7 +8,20 @@ import { CancelError, LockError } from "./error.js"
  */
 
 export const isLocked = Stream.isLocked
-export const init = Stream.create
+
+/**
+ * @template T
+ * @param {UnderlyingSource<T>} source
+ * @param {QueuingStrategy<T>} strategy
+ * @returns {State<T>}
+ */
+export const init = (source, strategy) => {
+  const state = Stream.create(source, strategy)
+  if (typeof source.start === "function") {
+    source.start(state.controller)
+  }
+  return state
+}
 
 /**
  * @template T

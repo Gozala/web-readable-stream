@@ -69,6 +69,7 @@ export const close = (state) => {
           Stream.close(state)
         }
       }
+      return
     }
   }
 

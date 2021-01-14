@@ -1,4 +1,5 @@
 import Async from "../async.js"
+import Constants from "../constants.js"
 
 /**
  * @template T
@@ -18,7 +19,7 @@ export class Read extends Async {
     this.fail(error)
   }
   close() {
-    this.succeed({ done: true })
+    this.succeed(Constants.done)
   }
 }
 

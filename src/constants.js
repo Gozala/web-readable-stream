@@ -35,10 +35,10 @@ export default class Constants {
     return value
   }
 
-  static get Done() {
+  static get done() {
     /** @type {IteratorReturnResult<void> & ReadableStreamReadDoneResult<any>} */
     const value = Object.freeze({ done: true, value: undefined })
-    Object.defineProperty(this, "Done", { value })
+    Object.defineProperty(this, "done", { value })
     return value
   }
 
