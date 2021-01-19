@@ -1,7 +1,6 @@
 import { EnqueueError, ReleaseError } from "./error.js"
 import Async from "../async.js"
 import * as Controller from "./controller.js"
-import { one } from "../util.js"
 
 /**
  * @template T
@@ -168,10 +167,10 @@ export const clearQueue = (state) => {
 /**
  * @template T
  * @param {import('../types/readable').Source<T>} source
- * @param {QueuingStrategy<T>} strategy
+ * @param {Required<QueuingStrategy<T>>} strategy
  * @returns {import('../types/readable').Readable<T>}
  */
-export const create = (source, strategy) => {
+export const create = (source, { highWaterMark, size }) => {
   return {
     status: "readable",
     source,
@@ -190,60 +189,10 @@ export const create = (source, strategy) => {
     queue: [],
     queueTotalSize: 0,
 
-    highWaterMark: decodeHighWaterMark(strategy.highWaterMark, 1),
-    chunkSize: decodeSize(strategy, one),
+    highWaterMark,
+    chunkSize: size,
 
     error: null,
-  }
-}
-
-/**
- * @template T
- * @param {UnderlyingSource<T>} source
- * @param {QueuingStrategy<T>} strategy
- * @returns {State<T>}
- */
-
-/**
- * @param {any} highWaterMark
- * @param {number} defaultHighWaterMark
- * @returns {number}
- */
-const decodeHighWaterMark = (highWaterMark, defaultHighWaterMark) => {
-  if (typeof highWaterMark === "undefined") {
-    return defaultHighWaterMark
-  } else {
-    const n = Number(highWaterMark)
-    if (n < 0 || isNaN(n)) {
-      throw new TypeError(
-        `A queuing strategy's highWaterMark property must be a nonnegative, non-NaN number`
-      )
-    } else {
-      return n
-    }
-  }
-}
-
-/**
- * @template T
- * @param {QueuingStrategy<T>} strategy
- * @param {QueuingStrategySizeCallback<T>} defaultSize
- * @returns {QueuingStrategySizeCallback<T>}
- */
-const decodeSize = (strategy, defaultSize) => {
-  const { size } = strategy
-  switch (typeof size) {
-    case "function": {
-      return (chunk) => size.call(strategy, chunk)
-    }
-    case "undefined": {
-      return defaultSize
-    }
-    default: {
-      throw new TypeError(
-        `A queuing strategy's size property must be a function`
-      )
-    }
   }
 }
 

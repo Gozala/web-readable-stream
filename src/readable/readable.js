@@ -3,7 +3,7 @@ import * as Stream from "./stream.js"
 import { CancelError, LockError } from "./error.js"
 import * as Controller from "./controller.js"
 import * as Source from "./source.js"
-
+import * as Strategy from "./strategy.js"
 /**
  * @template T
  * @typedef {import('../types/readable').StreamState<T>} State
@@ -13,16 +13,18 @@ export const isLocked = Stream.isLocked
 
 /**
  * @template T
- * @param {UnderlyingSource<T>|UnderlyingByteSource} source
- * @param {QueuingStrategy<T>} strategy
+ * @param {UnderlyingSource<T>|UnderlyingByteSource} underlyingSource
+ * @param {QueuingStrategy<T>} queuingStrategy
  * @returns {State<T>}
  */
-export const init = (source, strategy) => {
-  if (source.type === undefined) {
-    const state = Stream.create(Source.from(source), strategy)
+export const init = (underlyingSource, queuingStrategy) => {
+  if (underlyingSource.type === undefined) {
+    const strategy = Strategy.from(queuingStrategy)
+    const source = Source.from(underlyingSource)
+    const state = Stream.create(source, strategy)
     Controller.start(state)
     return state
-  } else if (String(source.type) === "bytes") {
+  } else if (String(underlyingSource.type) === "bytes") {
     throw new TypeError(
       `support for 'new ReadableStream({ type: "bytes" })' is not yet implemented`
     )
