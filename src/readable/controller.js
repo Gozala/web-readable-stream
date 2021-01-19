@@ -1,6 +1,5 @@
 import * as Stream from "./stream.js"
 import { CloseError } from "./error.js"
-import * as Source from "./source.js"
 /**
  * @template T
  * @typedef {import('../types/readable').StreamState<T>} State<T>
@@ -50,31 +49,13 @@ export class StreamController {
 }
 
 /**
- *
- * @param {UnderlyingSource} source
- * @param {keyof UnderlyingSource} name
- */
-const ensureMethod = (source, name) => {
-  switch (typeof source[name]) {
-    case "undefined":
-    case "function":
-      break
-    default:
-      throw new TypeError(
-        `ReadbleStream source.{name} method is not a function`
-      )
-  }
-}
-
-/**
  * @template T
  * @param {import('../types/readable').Readable<T>} state
  */
+// Note: start needs to be sync so that error from `source.start`
+// throws on constructon as opposed to fails stream.
 export const start = (state) => {
-  const { source } = state
-  ensureMethod(source, "pull")
-  ensureMethod(source, "cancel")
-  const result = Source.start(source, ensureController(state))
+  const result = state.source.start(ensureController(state))
   handleStart(state, result)
 }
 
@@ -127,8 +108,8 @@ export const close = (state) => {
         if (state.queue.length === 0) {
           Stream.close(state)
         }
+        return
       }
-      return
     }
   }
 

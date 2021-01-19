@@ -2,7 +2,7 @@ import { EnqueueError, ReleaseError } from "./error.js"
 import Async from "../async.js"
 import * as Controller from "./controller.js"
 import { one } from "../util.js"
-import Constants from "../constants.js"
+
 /**
  * @template T
  * @typedef {import('../types/readable').StreamState<T>} State
@@ -167,7 +167,7 @@ export const clearQueue = (state) => {
 
 /**
  * @template T
- * @param {UnderlyingSource<T>} source
+ * @param {import('../types/readable').Source<T>} source
  * @param {QueuingStrategy<T>} strategy
  * @returns {import('../types/readable').Readable<T>}
  */
@@ -194,23 +194,6 @@ export const create = (source, strategy) => {
     chunkSize: decodeSize(strategy, one),
 
     error: null,
-  }
-}
-
-/**
- *
- * @param {UnderlyingSource} source
- * @param {keyof UnderlyingSource} name
- */
-const ensureMethod = (source, name) => {
-  switch (typeof source[name]) {
-    case "undefined":
-    case "function":
-      break
-    default:
-      throw new TypeError(
-        `ReadbleStream source.{name} method is not a function`
-      )
   }
 }
 

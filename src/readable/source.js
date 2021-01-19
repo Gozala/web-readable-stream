@@ -1,20 +1,13 @@
-import Constants from "../constants.js"
-
 /**
  * @template T
  * @param {UnderlyingSource<T>} underlyingSource
- * @returns {{
- * start:ReadableStreamDefaultControllerCallback<T>,
- * pull: ReadableStreamDefaultControllerCallback<T>,
- * cancel: ReadableStreamErrorCallback
- * }}
+ * @returns {import('../types/readable').Source<T>}
  */
-const setup = (underlyingSource) => {
-  const { start, pull, cancel } = underlyingSource
+export const from = (underlyingSource) => {
   return {
-    start: start === undefined ? noop : start.bind(underlyingSource),
-    pull: pull === undefined ? noop : pull.bind(underlyingSource),
-    cancel: cancel === undefined ? noop : cancel.bind(underlyingSource),
+    start: bindMethod(underlyingSource, "start") || noop,
+    pull: bindMethod(underlyingSource, "pull") || noop,
+    cancel: bindMethod(underlyingSource, "cancel") || noop,
   }
 }
 
@@ -22,13 +15,21 @@ const noop = () => {}
 
 /**
  * @template T
- * @param {UnderlyingSource} source
- * @param {ReadableStreamDefaultController<T>} controller
- * @returns {Promise<void>}
+ * @template {'start'|'cancel'|'pull'} Name
+ * @param {UnderlyingSource<T>} source
+ * @param {Name} name
+ * @returns {UnderlyingSource<T>[Name]}
  */
-export const start = (source, controller) => {
-  if (source.start !== undefined) {
-    return Promise.resolve(source.start(controller))
+const bindMethod = (source, name) => {
+  const method = source[name]
+  switch (typeof method) {
+    case "undefined":
+      return undefined
+    case "function":
+      return method.bind(source)
+    default:
+      throw new TypeError(
+        `ReadbleStream source.{name} method is not a function`
+      )
   }
-  return Constants.voidPromise
 }

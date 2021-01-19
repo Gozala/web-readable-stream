@@ -83,9 +83,10 @@ export const assert_unreached = (message) => expect().fail(message)
  * @param {any} _unit
  * @param {any} error
  * @param {Promise<any>} promise
+ * @param {string} [message]
  */
-export const promise_rejects_exactly = async (_unit, error, promise) =>
-  promise.catch((reason) => expect(reason).to.be(error))
+export const promise_rejects_exactly = async (_unit, error, promise, message) =>
+  promise.catch((reason) => expect(reason, message).to.be(error))
 
 // For tests which verify that the implementation doesn't do something it shouldn't, it's better not to use a
 // timeout. Instead, assume that any reasonable implementation is going to finish work after 2 times around the event

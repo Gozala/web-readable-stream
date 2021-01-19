@@ -168,11 +168,12 @@ const pull = (state, request) => {
 
     if (state.closeRequested && state.queue.length === 0) {
       // Stream.clearController(state)
-      Stream.close(state)
+      // Tests expect that read callback will be invoked before
+      // close callback that is otherwise impossible to guarantee.
+      setTimeout(Stream.close, 0, state)
     } else {
       Stream.pull(state)
     }
-
     request.return(chunk)
   } else {
     state.readRequests.push(request)

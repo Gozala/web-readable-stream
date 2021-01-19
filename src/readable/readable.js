@@ -2,6 +2,7 @@ import * as Reader from "./reader.js"
 import * as Stream from "./stream.js"
 import { CancelError, LockError } from "./error.js"
 import * as Controller from "./controller.js"
+import * as Source from "./source.js"
 
 /**
  * @template T
@@ -18,7 +19,7 @@ export const isLocked = Stream.isLocked
  */
 export const init = (source, strategy) => {
   if (source.type === undefined) {
-    const state = Stream.create(source, strategy)
+    const state = Stream.create(Source.from(source), strategy)
     Controller.start(state)
     return state
   } else if (String(source.type) === "bytes") {
