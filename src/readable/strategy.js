@@ -43,7 +43,7 @@ const decodeHighWaterMark = (highWaterMark, defaultHighWaterMark) => {
   } else {
     const n = Number(highWaterMark)
     if (n < 0 || isNaN(n)) {
-      throw new TypeError(
+      throw new RangeError(
         `A queuing strategy's highWaterMark property must be a nonnegative, non-NaN number`
       )
     } else {
@@ -62,7 +62,14 @@ const decodeSize = (strategy, defaultSize) => {
   const { size } = strategy
   switch (typeof size) {
     case "function": {
-      return (chunk) => size.call(strategy, chunk)
+      return (chunk) => {
+        const n = size.call(strategy, chunk)
+        if (isNonNegativeNumber(n)) {
+          return n
+        } else {
+          throw new RangeError(`'size' must be a finite, non-negative number`)
+        }
+      }
     }
     case "undefined": {
       return defaultSize

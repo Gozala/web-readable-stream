@@ -26,6 +26,12 @@ export interface Reader<T> {
   releaseLock(): void
 }
 
+export interface Source<T> {
+  pull: ReadableStreamDefaultControllerCallback<T>
+  start: ReadableStreamDefaultControllerCallback<T>
+  cancel: ReadableStreamErrorCallback
+}
+
 export type StreamState<T> = Readable<T> | Closed<T> | Errored<T>
 
 export interface StreamController<T> extends ReadableStreamDefaultController {}
@@ -34,7 +40,7 @@ export interface BaseState<T> {
   reader: ReaderState<T> | null
   controller: StreamController<T> | null
 
-  source: UnderlyingSource<T>
+  source: Source<T>
 
   disturbed: boolean
 

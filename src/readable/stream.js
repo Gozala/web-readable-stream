@@ -134,25 +134,27 @@ export const pull = async (state) => {
 
 /**
  * @template T
- * @param {import('../types/readable').Readable<T>} state
+ * @param {State<T>} state
  * @param {Error} reason
  */
 export const error = (state, reason) => {
-  const errored = asErrored(state, reason)
-  for (const request of state.readRequests) {
-    request.throw(reason)
-  }
-  const needsToWait = state.readRequests.length > 0
-  state.readRequests.length = 0
-
-  if (state.reader) {
-    if (needsToWait) {
-      setTimeout(failClose, 0, state.reader, reason)
-    } else {
-      failClose(state.reader, reason)
+  if (state.status === "readable") {
+    const errored = asErrored(state, reason)
+    for (const request of state.readRequests) {
+      request.throw(reason)
     }
+    const needsToWait = state.readRequests.length > 0
+    state.readRequests.length = 0
+
+    if (state.reader) {
+      if (needsToWait) {
+        setTimeout(failClose, 0, state.reader, reason)
+      } else {
+        failClose(state.reader, reason)
+      }
+    }
+    void errored
   }
-  void errored
 }
 
 /**
