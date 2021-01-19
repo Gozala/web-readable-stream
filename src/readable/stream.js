@@ -105,10 +105,6 @@ export const enqueue = (state, chunk) => {
  * @see https://streams.spec.whatwg.org/#readable-stream-default-controller-call-pull-if-needed
  */
 export const pull = async (state) => {
-  console.log("PULLING", {
-    pulling: state.pulling,
-    pullAgain: state.pullAgain,
-  })
   const { source } = state
   if (typeof source.pull === "function") {
     if (needsPull(state)) {
@@ -199,18 +195,6 @@ export const create = (source, strategy) => {
 
     error: null,
   }
-}
-
-/**
- * @template T
- * @param {import('../types/readable').Readable<T>} state
- */
-export const start = ({ source, controller }) => {
-  if (typeof source.start !== "undefined") {
-    source.start(controller)
-  }
-  ensureMethod(source, "cancel")
-  ensureMethod(source, "pull")
 }
 
 /**

@@ -47,10 +47,28 @@ export class Reader {
  * @param {StreamState<T>} stream
  * @returns {State<T>}
  */
-export const init = (stream) => ({
-  stream,
-  closed: new Async(),
-})
+export const init = (stream) => {
+  switch (stream.status) {
+    case "readable": {
+      return {
+        stream,
+        closed: new Async(),
+      }
+    }
+    case "closed": {
+      return {
+        stream,
+        closed: Async.succeed(undefined),
+      }
+    }
+    case "errored": {
+      return {
+        stream,
+        closed: Async.fail(stream.error),
+      }
+    }
+  }
+}
 
 /**
  * Returns stream for this reader or throws an exception if reader has released
@@ -141,16 +159,20 @@ export const cancel = async (state, reason) =>
  * @template T
  * @param {import('../types/readable').Readable<T>} state
  * @param {import('../types/readable').ReadRequest<T>} request
+ * @see https://streams.spec.whatwg.org/#rs-default-controller-private-pull
  */
 const pull = (state, request) => {
   if (state.queue.length > 0) {
     const chunk = /** @type {T} */ (state.queue.shift())
+    state.queueTotalSize -= state.chunkSize(chunk)
+
     if (state.closeRequested && state.queue.length === 0) {
       // Stream.clearController(state)
       Stream.close(state)
     } else {
       Stream.pull(state)
     }
+
     request.return(chunk)
   } else {
     state.readRequests.push(request)

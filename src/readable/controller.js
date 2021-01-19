@@ -1,6 +1,6 @@
 import * as Stream from "./stream.js"
 import { CloseError } from "./error.js"
-
+import * as Source from "./source.js"
 /**
  * @template T
  * @typedef {import('../types/readable').StreamState<T>} State<T>
@@ -72,21 +72,10 @@ const ensureMethod = (source, name) => {
  */
 export const start = (state) => {
   const { source } = state
-  ensureMethod(source, "start")
   ensureMethod(source, "pull")
   ensureMethod(source, "cancel")
-
-  if (typeof source.start !== "undefined") {
-    const controller = ensureController(state)
-    const result = source.start(controller)
-    if (result) {
-      handleStart(state, result)
-      return
-    }
-  }
-
-  state.started = true
-  Stream.pull(state)
+  const result = Source.start(source, ensureController(state))
+  handleStart(state, result)
 }
 
 /**
@@ -106,7 +95,7 @@ export const ensureController = (state) => {
 /**
  * @template T
  * @param {State<T>} state
- * @param {PromiseLike<unknown>} ready
+ * @param {PromiseLike<unknown>|unknown} ready
  */
 const handleStart = async (state, ready) => {
   try {
