@@ -1,6 +1,7 @@
 import * as Reader from "./reader.js"
 import * as Stream from "./stream.js"
 import { CancelError, LockError } from "./error.js"
+import * as Controller from "./controller.js"
 
 /**
  * @template T
@@ -11,16 +12,22 @@ export const isLocked = Stream.isLocked
 
 /**
  * @template T
- * @param {UnderlyingSource<T>} source
+ * @param {UnderlyingSource<T>|UnderlyingByteSource} source
  * @param {QueuingStrategy<T>} strategy
  * @returns {State<T>}
  */
 export const init = (source, strategy) => {
-  const state = Stream.create(source, strategy)
-  if (typeof source.start === "function") {
-    source.start(state.controller)
+  if (source.type === undefined) {
+    const state = Stream.create(source, strategy)
+    Controller.start(state)
+    return state
+  } else if (String(source.type) === "bytes") {
+    throw new TypeError(
+      `support for 'new ReadableStream({ type: "bytes" })' is not yet implemented`
+    )
+  } else {
+    throw new TypeError(`'underlyingSource.type' must be "bytes" or undefined.`)
   }
-  return state
 }
 
 /**
@@ -42,17 +49,24 @@ export const cancel = (stream, reason) => {
 /**
  * @template T
  * @param {State<T>} stream
+ * @param {{mode:"byob"}} [options]
  * @returns {ReadableStreamDefaultReader<T>}
  */
-export const getReader = (stream) => {
+export const getReader = (stream, options) => {
   if (isLocked(stream)) {
     throw new LockError(
       "A Reader may only be created for an unlocked ReadableStream"
     )
-  } else {
+  } else if (!options || options.mode === undefined) {
     const state = Reader.init(stream)
     stream.reader = state
     return new Reader.Reader(state)
+  } else if (options.mode === "byob") {
+    throw new TypeError("byob readers ar not supported")
+  } else {
+    throw new TypeError(
+      `Invalid mode "${options.mode}" passed to a getReader method of ReadableStream`
+    )
   }
 }
 

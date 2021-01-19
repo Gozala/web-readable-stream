@@ -2,6 +2,7 @@ import { EnqueueError, ReleaseError } from "./error.js"
 import Async from "../async.js"
 import * as Controller from "./controller.js"
 import { one } from "../util.js"
+import Constants from "../constants.js"
 /**
  * @template T
  * @typedef {import('../types/readable').StreamState<T>} State
@@ -78,13 +79,14 @@ export const enqueue = (state, chunk) => {
           // `chunkSize` may throw exception in which case we fail the stream.
           state.queueTotalSize += state.chunkSize(chunk)
           state.queue.push(chunk)
-
-          if (typeof state.source.pull === "function") {
-            pull(state)
-          }
         } catch (reason) {
           error(state, reason)
+          throw reason
         }
+      }
+
+      if (typeof state.source.pull === "function") {
+        pull(state)
       }
       break
     }
@@ -103,7 +105,11 @@ export const enqueue = (state, chunk) => {
  * @see https://streams.spec.whatwg.org/#readable-stream-default-controller-call-pull-if-needed
  */
 export const pull = async (state) => {
-  const { source, controller } = state
+  console.log("PULLING", {
+    pulling: state.pulling,
+    pullAgain: state.pullAgain,
+  })
+  const { source } = state
   if (typeof source.pull === "function") {
     if (needsPull(state)) {
       if (state.pulling) {
@@ -113,7 +119,7 @@ export const pull = async (state) => {
       } else {
         state.pulling = true
         try {
-          await source.pull(controller)
+          await source.pull(Controller.ensureController(state))
           state.pulling = false
         } catch (reason) {
           state.pulling = false
@@ -141,10 +147,15 @@ export const error = (state, reason) => {
   for (const request of state.readRequests) {
     request.throw(reason)
   }
+  const needsToWait = state.readRequests.length > 0
   state.readRequests.length = 0
 
   if (state.reader) {
-    failClose(state.reader, reason)
+    if (needsToWait) {
+      setTimeout(failClose, 0, state.reader, reason)
+    } else {
+      failClose(state.reader, reason)
+    }
   }
   void errored
 }
@@ -162,21 +173,15 @@ export const clearQueue = (state) => {
  * @template T
  * @param {UnderlyingSource<T>} source
  * @param {QueuingStrategy<T>} strategy
- * @returns {State<T>}
+ * @returns {import('../types/readable').Readable<T>}
  */
 export const create = (source, strategy) => {
-  /** @type {State<T>} */
-  const state = {
+  return {
     status: "readable",
     source,
-    get controller() {
-      // TODO: This is ugly, maybe we should use Controller instead of state
-      // to avoid circular reference here.
-      const controller = new Controller.Controller(state)
-      Object.defineProperty(this, "controller", { value: controller })
-      return controller
-    },
+    started: false,
 
+    controller: null,
     reader: null,
     disturbed: false,
     pulling: false,
@@ -194,9 +199,43 @@ export const create = (source, strategy) => {
 
     error: null,
   }
-
-  return state
 }
+
+/**
+ * @template T
+ * @param {import('../types/readable').Readable<T>} state
+ */
+export const start = ({ source, controller }) => {
+  if (typeof source.start !== "undefined") {
+    source.start(controller)
+  }
+  ensureMethod(source, "cancel")
+  ensureMethod(source, "pull")
+}
+
+/**
+ *
+ * @param {UnderlyingSource} source
+ * @param {keyof UnderlyingSource} name
+ */
+const ensureMethod = (source, name) => {
+  switch (typeof source[name]) {
+    case "undefined":
+    case "function":
+      break
+    default:
+      throw new TypeError(
+        `ReadbleStream source.{name} method is not a function`
+      )
+  }
+}
+
+/**
+ * @template T
+ * @param {UnderlyingSource<T>} source
+ * @param {QueuingStrategy<T>} strategy
+ * @returns {State<T>}
+ */
 
 /**
  * @param {any} highWaterMark
@@ -302,10 +341,10 @@ export const getDesiredSize = (stream) => {
  * @see https://streams.spec.whatwg.org/#readable-stream-default-controller-should-call-pull
  */
 const needsPull = (state) => {
-  if (state.status === "readable" && !state.closeRequested) {
+  if (state.status === "readable" && !state.closeRequested && state.started) {
     return (
       (isLocked(state) && state.readRequests.length > 0) ||
-      state.queueTotalSize <= state.highWaterMark
+      state.queueTotalSize < state.highWaterMark
     )
   } else {
     return false

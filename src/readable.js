@@ -7,15 +7,15 @@ import { pipeTo, pipeThrough } from "./readable/pipe.js"
 export default class Readable {
   /**
    *
-   * @param {UnderlyingSource<T>} [underlyingSource]
+   * @param {UnderlyingSource<T>|UnderlyingByteSource} [underlyingSource]
    * @param {QueuingStrategy<T>} [queuingStrategy]
    */
-  constructor(underlyingSource, queuingStrategy) {
+  constructor(underlyingSource = {}, queuingStrategy = {}) {
     /**
      * @private
-     * @type {import('./readable/readable').State<T>}
+     * @type {import('./types').State<T>}
      */
-    this.state = init(underlyingSource || {}, queuingStrategy || {})
+    this.state = init(underlyingSource, queuingStrategy)
   }
 
   /**
@@ -39,13 +39,7 @@ export default class Readable {
    * @returns {Args extends [] ? ReadableStreamDefaultReader<T> : ReadableStreamBYOBReader}
    */
   getReader(...[options]) {
-    if (options && options.mode === "byob") {
-      throw Error("byob readers ar not supported")
-    } else {
-      // @ts-ignore - impossible to satisfy conditional return types
-      // @see https://github.com/microsoft/TypeScript/issues/25590
-      return getReader(this.state)
-    }
+    return getReader(this.state, options)
   }
 
   /**

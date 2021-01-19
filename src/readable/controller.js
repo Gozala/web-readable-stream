@@ -10,12 +10,11 @@ import { CloseError } from "./error.js"
  * @template T
  * @implements {ReadableStreamDefaultController<T>}
  */
-export class Controller {
+export class StreamController {
   /**
    * @param {State<T>} state
    */
   constructor(state) {
-    /** @private */
     this.state = state
   }
 
@@ -47,6 +46,77 @@ export class Controller {
    */
   error(reason) {
     return error(this.state, reason)
+  }
+}
+
+/**
+ *
+ * @param {UnderlyingSource} source
+ * @param {keyof UnderlyingSource} name
+ */
+const ensureMethod = (source, name) => {
+  switch (typeof source[name]) {
+    case "undefined":
+    case "function":
+      break
+    default:
+      throw new TypeError(
+        `ReadbleStream source.{name} method is not a function`
+      )
+  }
+}
+
+/**
+ * @template T
+ * @param {import('../types/readable').Readable<T>} state
+ */
+export const start = (state) => {
+  const { source } = state
+  ensureMethod(source, "start")
+  ensureMethod(source, "pull")
+  ensureMethod(source, "cancel")
+
+  if (typeof source.start !== "undefined") {
+    const controller = ensureController(state)
+    const result = source.start(controller)
+    if (result) {
+      handleStart(state, result)
+      return
+    }
+  }
+
+  state.started = true
+  Stream.pull(state)
+}
+
+/**
+ * @template T
+ * @param {State<T>} state
+ */
+export const ensureController = (state) => {
+  if (state.controller) {
+    return state.controller
+  } else {
+    const controller = new StreamController(state)
+    state.controller = controller
+    return controller
+  }
+}
+
+/**
+ * @template T
+ * @param {State<T>} state
+ * @param {PromiseLike<unknown>} ready
+ */
+const handleStart = async (state, ready) => {
+  try {
+    await ready
+    if (state.status === "readable") {
+      state.started = true
+      Stream.pull(state)
+    }
+  } catch (reason) {
+    error(state, reason)
   }
 }
 

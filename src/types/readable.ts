@@ -28,10 +28,13 @@ export interface Reader<T> {
 
 export type StreamState<T> = Readable<T> | Closed<T> | Errored<T>
 
+export interface StreamController<T> extends ReadableStreamDefaultController {}
+
 export interface BaseState<T> {
   reader: ReaderState<T> | null
+  controller: StreamController<T> | null
+
   source: UnderlyingSource<T>
-  controller: ReadableStreamDefaultController<T>
 
   disturbed: boolean
 
@@ -40,6 +43,7 @@ export interface BaseState<T> {
 }
 
 export interface Readable<T> extends BaseState<T> {
+  started: boolean
   status: "readable"
 
   readRequests: ReadRequest<T>[]
